@@ -4,12 +4,17 @@
 #include <string>
 #include <chrono>
 #include <ctime>
+#include <map>
+#include <sstream>
+#include <vector>
+#include <fstream>
+
 
 // Edits and comments by Graham Greig
 // This function obtains the information in the register readback and saves it into a
 // semi-parsed string.
 // Note: All ROOT functions are removed out at this time.
-int st_decode_abc_star_chip_register_packet(int module_id, unsigned char *regAddress, unsigned int *regValue, std::string *data, ofstream *outputfile)
+int st_decode_abc_star_chip_register_packet(int module_id, unsigned int *regAddress, unsigned int *regValue, std::string* data, std::ofstream *outputfile)
 {
   int error = 0;
   // Checks if HCC is present and throws and error if it is. This should not return zero but
@@ -81,9 +86,9 @@ int st_decode_abc_star_chip_register_packet(int module_id, unsigned char *regAdd
     int bit = e->m[module_id]->scan_lookup(e->burst_count, l, offset + b);
 
     // Get the data string and format.
-    *data.append(to_string(bit));
+    data->append(std::to_string(bit));
     if (((b == 2) || (b == 6) || b == 14 || b == 18 || b == 50 || b == 66))
-      *data.append(" ");
+      data->append(" ");
     
     // Unsure if this will still work... needs testing.
     accumulate = (accumulate << 1) + (bit ? 1 : 0);
@@ -132,7 +137,7 @@ int st_decode_abc_star_chip_register_packet(int module_id, unsigned char *regAdd
   return error;
 }
 
-void RegisterReadBack(const std::string &runname, int nloops, double interval = 1, bool debug = false)
+void RegisterReadBack_V0(const std::string &runname, int nloops, double interval = 1, bool debug = false)
 {
   //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
   // SETUP
@@ -152,37 +157,40 @@ void RegisterReadBack(const std::string &runname, int nloops, double interval = 
   {
     std::stringstream ss;
     ss << "Mask" << i;
-    regs.insert({0x10 + i, ss.srt()});
+    hw_regs.insert({0x10 + i, ss.str()});
   }
   for (int i = 0; i < 32; i++)
   {
     std::stringstream ss;
     ss << "TrimLo" << i;
-    regs.insert({0x40 + i, ss.str()});
+    hw_regs.insert({0x40 + i, ss.str()});
   }
   for (int i = 0; i < 8; i++)
   {
     std::stringstream ss;
     ss << "TrimHi" << i;
-    regs.insert({0x60 + i, ss.str()});
+    hw_regs.insert({0x60 + i, ss.str()});
   }
   for (int i = 0; i < 8; i++)
   {
     std::stringstream ss;
     ss << "CalMask" << i;
-    regs.insert({0x68 + i, ss.str()});
+    hw_regs.insert({0x68 + i, ss.str()});
   }
   for (int i = 0; i < 64; i++)
   {
     std::stringstream ss;
     ss << "Counter" << i;
-    regs.insert({0x80 + i, ss.str()}); 
+    hw_regs.insert({0x80 + i, ss.str()}); 
   }
 
+  //Setup the timer
   time_t timer;
   int starttime = time(&timer);
   struct tm *timeinfo;
-
+  std::chrono::time_point<std::chrono::system_clock> start, currentTime; 
+  start = std::chrono::system_clock::now(); 
+  
 // Should this still be used... Need to investigate.
   abc_star_hpr_stop(); // to make the hit pattern read out from the L0buffer consistent
   
@@ -192,19 +200,19 @@ void RegisterReadBack(const std::string &runname, int nloops, double interval = 
   // - Runs are 10 test iterations long.
   // - "nloops" determines the length of the overall test time.
   //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-  ofstream outputfile2(("runlog_" + runname + ".txt").c_str());
+  
+  std::ofstream outputfile2(("runlog_" + runname + ".txt").c_str());
   for (int l = 0; l < nloops; l++)
   {
     abc_star_seu_reset();
-    ofstream outputfile((runname + ".txt").c_str());
+    std::ofstream outputfile((runname + ".txt").c_str());
 
     const uint32_t sizeofmap = hw_regs.size();
-    uint32_t seconds, seconds0, timestamp, timestamp2, t1;
-    uint32_t value_of_register[sizeofmap], value_of_fail[sizeofmap];
+
     int totalhit_link0, totalhit_link1, event, run, loop, nfail;
     int size = (int)hw_regs.size();
     bool l0bufferfill;
-    vector<std::string> rawdata[sizeofmap];
+    std::vector<std::string> rawdata[sizeofmap];
     std::string names[16] =
         {
             //ABCStar
@@ -226,25 +234,46 @@ void RegisterReadBack(const std::string &runname, int nloops, double interval = 
             "VDDA",
         };
     double fmc1701_values[16] = {0}; //These values are only being saved to root... need to mod!!!
+    
+    // Cross section determiniation.
+    l0bufferfill = true;
+    if (l % 2 == 0)
+      l0bufferfill = false;
+    // Headder variables
+    run = e->runnum;
+    loop = l;
+
+    // Write of header for output file. 
+    outputfile << "RUN NUMBER: " << run << std::endl;
+    outputfile << "LOOP NUMBER: " << loop << std::endl;
+    outputfile << "SETTINGS" << std::endl;
+    outputfile << "L0 Buffer Fill: " << l0bufferfill << std::endl;
+    outputfile << "L0 Mask: " << !l0bufferfill << std::endl;
+    outputfile << "TrimDAC: " << !l0bufferfill << std::endl;
+    outputfile << "CalMask: " << !l0bufferfill << std::endl;
+    outputfile << "" << std::endl;
 
     //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // INTERNAL TEST LOOP
     // - Commands are sent to configure individual registers.
     // - Resisters are readout and saved to the active data file.
     //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
     const int nreadings = 10;
     for (int k = 0; k < nreadings; k++)
     {
       e->HsioFlush();
       if (debug)
-        cout << "File " << l << " register reading iteration " << k << std::endl;
-      run = e->runnum;
-      loop = l;
+        std::cout << "File " << l << " register reading iteration " << k << std::endl;
       event = l * nreadings + k;
-      timeinfo = localtime(&timer);
-      timestamp = timeinfo->tm_sec + timeinfo->tm_min * 100 + timeinfo->tm_hour * 10000;
-      t1 = time(&timer);
-      unsigned int microseconds = interval * 1e6;
+      //timeinfo = localtime(&timer);
+      //timestamp = timeinfo->tm_sec + timeinfo->tm_min * 100 + timeinfo->tm_hour * 10000;
+      //t1 = time(&timer);
+      currentTime = std::chrono::system_clock::now();
+      std::chrono::duration<double> elapsedTime = currentTime - start; 
+
+      outputfile << "Event Number: " << event << std::endl;
+      outputfile << "Elapsed Time: " << elapsedTime.count() << std::endl;
 
       //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
       // REGISTER WRITE
@@ -258,9 +287,6 @@ void RegisterReadBack(const std::string &runname, int nloops, double interval = 
       // Note: Raw event data will have the opposite cross section.
       //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-      l0bufferfill = true;
-      if (l % 2 == 0)
-        l0bufferfill = false;
       // Mask or unmask the L0 buffer and send a burst.
       abc_star_fill_l0(l0bufferfill);
       e->burst_ntrigs = 255;
@@ -282,8 +308,8 @@ void RegisterReadBack(const std::string &runname, int nloops, double interval = 
       int regVal = l0bufferfill?0xffff:0;
       for (int n = 0; n < 8; n++)
       {
-        e->ConfigureVariable(ST_ABC_STAR_RAW_REG_LO_BASE + 104 + n, regval);
-        e->ConfigureVariable(ST_ABC_STAR_RAW_REG_HI_BASE + 104 + n, regval);
+        e->ConfigureVariable(ST_ABC_STAR_RAW_REG_LO_BASE + 104 + n, regVal);
+        e->ConfigureVariable(ST_ABC_STAR_RAW_REG_HI_BASE + 104 + n, regVal);
       }
       e->ExecuteConfigs();
 
@@ -294,18 +320,20 @@ void RegisterReadBack(const std::string &runname, int nloops, double interval = 
       totalhit_link1 = e->m[0]->scan_sum[1];
       abc_star_scanL0Buffer(127, 1, 9);
 
-
-      timeinfo = localtime(&timer);
-      timestamp2 = timeinfo->tm_sec + timeinfo->tm_min * 100 + timeinfo->tm_hour * 10000;
-      seconds0 = time(&timer) - starttime; /* get current time; same as: timer = time(NULL)  */
+      
+      //timeinfo = localtime(&timer);
+      //timestamp2 = timeinfo->tm_sec + timeinfo->tm_min * 100 + timeinfo->tm_hour * 10000;
+      //seconds0 = time(&timer) - starttime; /* get current time; same as: timer = time(NULL)  */ 
+      elapsedTime = std::chrono::system_clock::now() - start - elapsedTime;
+      outputfile << "Write Time: " << elapsedTime.count() << std::endl;
 
       if (debug)
       {
-        cout << ctime(&timer) << std::endl;
+        std::cout << ctime(&timer) << std::endl;
       }
 
-      outputfile << run << " " << event << " " << timestamp << std::endl;
       nfail = 0;
+      outputfile << "REGISTER DATA" << std::endl;
 
       //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
       // REGISTER READ
@@ -318,10 +346,10 @@ void RegisterReadBack(const std::string &runname, int nloops, double interval = 
         int regId = it_reg->first;
         std::string regName = it_reg->second;
         if (debug)
-          cout << " Reading Register ID " << regId << std::endl;
+          std::cout << " Reading Register ID " << regId << std::endl;
 
         e->ReadChipRegister(regId);
-        unsigned char regAddress = 0;
+        unsigned int regAddress = 0;
         unsigned int regValue = 0;
         // Single ABC, doesn't have an index
         unsigned int chipIndex = 0;
@@ -332,71 +360,64 @@ void RegisterReadBack(const std::string &runname, int nloops, double interval = 
 
         if (debug)
         {
-          cout << std::endl;
-          cout << "Reading Register " << regName << std::endl;
+          std::cout << std::endl;
+          std::cout << "Reading Register " << regName << std::endl;
         }
 
-        //vector<int> packet_of_register;
-        // This is where data is being lost! Need to just get the raw data into an output file!!!!!!!!!!
+        // Data parser.
         error = st_decode_abc_star_chip_register_packet(n, &regAddress, &regValue, &data, &outputfile);
-        value_of_fail[reg_index] = error;
-        value_of_register[reg_index] = regValue;
-        rawdata[reg_index] = data;
-        if (did_fail != 0)
+        
+        // Commenting this out for now as I belive it terminates loops early...
+        /*if (did_fail != 0)
         {
           e->HsioFlush();
           nfail++;
-        }
-        
-        //packet[reg_index] = packet_of_register;
-
-        /*for (int k = 0; k < packet_of_register.size(); k++)
-        {
-          outputfile << packet_of_register[k];
-          if (((k == 2) || (k == 6) || k == 14 || k == 18 || k == 50 || k == 66))
-            outputfile << " ";
         }*/
-        outputfile << data << std::endl;
+        
+        //Output register values to data file. 
+        outputfile << "Register Address: " << regId << " Register Name: " << regName << std::endl;
+        outputfile << "Recieved Register Address: " << regAddress <<  std::endl;
+        outputfile << "Recieved Data Packet (LONG): " << regValue <<  std::endl;
+        outputfile << "Binary Data: " <<  data << std::endl;
+        elapsedTime = std::chrono::system_clock::now() - start - elapsedTime;
+        outputfile << "Read Time: " << elapsedTime.count() << std::endl;
+        outputfile << "" << std::endl;
         reg_index++;
       }
 
+      //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      // FMC1701 Read
+      //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
       std::vector<double> data_ina230ReadIV = f->ina230ReadIV(0);
       std::vector<double> muxdata = f->max11617ReadOneChip(0);
 
-      // NEED TO FIND A PLACE TO WRITE THESE!!!
+      outputfile << "FMC1701 Values: " << std::endl;
       for (int a = 0; a < (int)data_ina230ReadIV.size(); a++)
       {
-        fmc1701_values[a + 12] = data_ina230ReadIV[a];
+        //fmc1701_values[a + 12] = data_ina230ReadIV[a];
+        outputfile << names[a + 12] << ": " << data_ina230ReadIV[a] << std::endl;
       }
 
       for (int a = 0; a < (int)muxdata.size(); a++)
       {
         fmc1701_values[a] = muxdata[a];
+        outputfile << names[a] << ": " << muxdata[a] << std::endl;
       }
 
-      seconds = time(&timer) - starttime; /* get current time; same as: timer = time(NULL)  */
-      t1 = time(&timer) - t1;
+      //seconds = time(&timer) - starttime; /* get current time; same as: timer = time(NULL)  */
+      //t1 = time(&timer) - t1;
 
-      outputfile2 << std::std::endl;
+      outputfile2 << std::endl;
       outputfile2 << setw(20) << "Event Meta Data - Run " << setw(5) << run << setw(15) << " fileNumber " << l << setw(15) << " eventNumber " << event << setw(25) << " timestamp " << timestamp << setw(25) << " single measurement time " << t1 << std::std::endl;
       outputfile2 << "FMC I/V readings - VDDA_RAW_SENSE " << fmc1701_values[8] << " V, VDDA_RAW_SENSE " << fmc1701_values[9] << " V, IDDD " << fmc1701_values[12] << " mA, IDDA " << fmc1701_values[13] << " mA" << std::std::endl;
-
       outputfile2 << "L0buffer total hit numbers - even bank " << totalhit_link0 << " odd bank " << totalhit_link1 << " expected hit = 65536 = 256*256 when filled, 0 even not filled. L0buffer fill status" << l0bufferfill << std::std::endl;
-      if (l0bufferfill && (totalhit_link0 != 65536 || totalhit_link1 != 65536))
-        outputfile2 << "L0buffer filled, but readout hit pattern doesn't match the expectation " << std::std::endl;
-      outputfile2 << "Total number of register read errors " << nfail << std::std::endl;
-     // tree.Fill();
+      outputfile2 << "Total number of register read errors " << nfail << std::endl;
 
       abc_star_reg_reset();
       star_chip_fast_command(7, 0);
     }
 
-    /* ff.cd();
-    cout << ff.GetName() << std::endl;
-    tree.Write();
-    ff.Close();*/
-
-    cout << "File closed here " << std::endl;
+    std::cout << "File closed here " << std::endl;
 
     //std::string command = ".! mv " + runname + ".root " + jobid;
     gROOT->ProcessLine(command.c_str());
@@ -405,6 +426,6 @@ void RegisterReadBack(const std::string &runname, int nloops, double interval = 
 
     std::string jobid_txt = (runname + "_" + std::to_string(l) + ".txt");
     std::string command_txt = ".! mv " + runname + ".txt " + jobid_txt;
-    std::cout << " Outputing file " << runname << "_" << l << ".txt" << std::std::endl;
+    std::cout << " Outputing file " << runname << "_" << l << ".txt" << std::endl;
   }
 }
