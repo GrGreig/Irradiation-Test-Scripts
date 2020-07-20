@@ -420,12 +420,14 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
     std::cout << "File closed here " << std::endl;
 
     //std::string command = ".! mv " + runname + ".root " + jobid;
-    gROOT->ProcessLine(command.c_str());
-    gROOT->ProcessLine(command_txt.c_str());
     //std::cout << " Outputing file " << runname << "_" << l << ".root" << std::std::endl;
 
-    std::string jobid_txt = (runname + "_" + std::to_string(l) + ".txt");
+    /*std::string jobid_txt = (runname + "_" + std::to_string(l) + ".txt");
     std::string command_txt = ".! mv " + runname + ".txt " + jobid_txt;
+
+    gROOT->ProcessLine(command.c_str());
+    gROOT->ProcessLine(command_txt.c_str());*/
     std::cout << " Outputing file " << runname << "_" << l << ".txt" << std::endl;
+    
   }
 }
