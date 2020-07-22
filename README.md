@@ -92,13 +92,23 @@ Find the following lines of code and change the 1s to zeros. Should look like th
   Int_t hvtype = 0;
 ```
 
-### Setup the HSIO
-Enter the following commands to setup the HSIO FIFOs
+### Setup the HSIO/ Device Config
+The UDP settings now need to be put in place. Navigate into the sctvar/config file folder and open the `st_system_config.dat` file.
+
+At the top, add the line:
 
 ```
-mkfifo /tmp/hsioPipe.fromHsio
-mkfifo /tmp/hsioPipe.toHsio 
+DAQ udp 192.168.222.16 60001,60001
 ```
+
+Note, the last part of the IP address (here 16) corresponds to the settings of the dip switches on the Nexys board. These are anything from 16-31.
+
+To communicate with an ABCStar chip, comment out all lines that begin with `Module` and add the following line:
+
+```
+Module    0  1  1   0  0  1 50 50 abc_star ABC_STAR
+```
+
 ### Download the Irrad. Scripts
 
 In the <workspace> directory clone this repo:
@@ -123,23 +133,11 @@ Now the software should be setup to run a test.
 Start by setting up the HSIO pipe. Navigate to the itsdaq-sw directory and run the following command:
 
 ```
-ifconfig
+ sudo ifconfig <ethernetID> 192.168.222.123 netmask 255.255.255.0 up
 ```
+This will set the static IP address of the connection to the Nexys board. The variable <ethernetID> is determined by using the command `ifconfig` and checking getting the ID of the port connected to the FPGA.
 
-This will give the network parameters needed for raw connection to the HSIO. The inet parameter will give the MAC addess needed to connect with the device. The name of the device will be a headder to the packet of information. It is up to the user to determine which port the nexysis connected on. Using this information the hsio pipe can be setup with the following commands:
-```
-sudo su;
-
-bin/hsioPipe --eth eth1,e0:dd:cc:bb:aa:00 --file /tmp/hsioPipe.toHsio, /tmp/hsioPipe.fromHsio &
-```
-Here, `eth1` and `e0:dd:cc:bb:aa:00` are taken as outputs from the `ifconfig` query.
-
-Following this, open a new terminal and navigate to the itsdaq-sw folder:
-
-```
-cd $SCTDAQ_ROOT
-```
-Run the following commnad and enter your initials when prompted.
+Now, Run the following commnad and enter your initials when prompted.
 
 ``` 
 ./RUNITSDAQ.sh
