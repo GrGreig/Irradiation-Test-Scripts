@@ -75,6 +75,75 @@ python waf install
 ```
 Note: At the time of writing cofigure cannot find the files lmcurve_tyd.h and nivxi.h. It is unknown if this will casue issues.
 
+A bug has been notieced when tryig to load the LV and HV automatic control libraries. To fix this:
+
+```
+cd macros; nano Stavelet.cpp
+
+```
+Find the following lines of code and change the 1s to zeros. Should look like this when done.
+```
+  // Load power supplies in ROOT6
+  // (may already be loaded in ROOT5 version of rootlogon.C)
+  Int_t lvtype = 0; // 0 indicates manual control of LV,
+                    // 4 indicates ITSDAQ GUI control of LV,
+                    // 130 indicates StarChips ASIC test setup with QL355TP
+                    // (according to https://twiki.cern.ch/twiki/bin/view/Atlas>
+  Int_t hvtype = 0;
+```
+
+### Setup the HSIO
+Enter the following commands to setup the HSIO FIFOs
+
+```
+mkfifo /tmp/hsioPipe.fromHsio
+mkfifo /tmp/hsioPipe.toHsio 
+```
+### Download the Irrad. Scripts
+
+In the <workspace> directory clone this repo:
+  
+```
+git clone https://github.com/GrGreig/Irradiation-Test-Scripts
+```
+Now move the macro script to the itsdaq-sw directory:
+
+```
+cp Irradiation-Test-Scripts/RegisterReadBack_V0.C itsdaq-sw/
+```
+
 ### Nexys Firmware Setup
 
 To upload the firmware to the Nexys Video, upload the .bit file found in this repo onto an SD card. Set the JP3 and JP4 jumpers on the board both to SD and power cycle the board. 
+
+### Running a Test
+
+Now the software should be setup to run a test.
+
+Start by setting up the HSIO pipe. Navigate to the itsdaq-sw directory and run the following command:
+
+```
+ifconfig
+```
+
+This will give the network parameters needed for raw connection to the HSIO. The inet parameter will give the MAC addess needed to connect with the device. The name of the device will be a headder to the packet of information. It is up to the user to determine which port the nexysis connected on. Using this information the hsio pipe can be setup with the following commands:
+```
+sudo su;
+
+bin/hsioPipe --eth eth1,e0:dd:cc:bb:aa:00 --file /tmp/hsioPipe.toHsio, /tmp/hsioPipe.fromHsio &
+```
+Here, `eth1` and `e0:dd:cc:bb:aa:00` are taken as outputs from the `ifconfig` query.
+
+Following this, open a new terminal and navigate to the itsdaq-sw folder:
+
+```
+cd $SCTDAQ_ROOT
+```
+Run the following commnad and enter your initials when prompted.
+
+``` 
+./RUNITSDAQ.sh
+```
+
+
+
