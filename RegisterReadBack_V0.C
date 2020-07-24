@@ -143,7 +143,7 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
   // SETUP
   //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
   // Trying to dump the raw data for comparison... unsure if this will work without testing.
-  burst.dump_raw_data = true;
+  e->burst.dump_raw_data = true;
 
   //Defining register map.
   std::string hw_chip_name = "ABC";
@@ -408,9 +408,9 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
       //t1 = time(&timer) - t1;
 
       outputfile2 << std::endl;
-      outputfile2 << setw(20) << "Event Meta Data - Run " << setw(5) << run << setw(15) << " fileNumber " << l << setw(15) << " eventNumber " << event << setw(25) << " timestamp " << timestamp << setw(25) << " single measurement time " << t1 << std::std::endl;
-      outputfile2 << "FMC I/V readings - VDDA_RAW_SENSE " << fmc1701_values[8] << " V, VDDA_RAW_SENSE " << fmc1701_values[9] << " V, IDDD " << fmc1701_values[12] << " mA, IDDA " << fmc1701_values[13] << " mA" << std::std::endl;
-      outputfile2 << "L0buffer total hit numbers - even bank " << totalhit_link0 << " odd bank " << totalhit_link1 << " expected hit = 65536 = 256*256 when filled, 0 even not filled. L0buffer fill status" << l0bufferfill << std::std::endl;
+      outputfile2 << setw(20) << "Event Meta Data - Run " << setw(5) << run << setw(15) << " fileNumber " << l << setw(15) << " eventNumber " << event << setw(25) << setw(25) << " single measurement time " << t1 << std::endl;
+      outputfile2 << "FMC I/V readings - VDDA_RAW_SENSE " << fmc1701_values[8] << " V, VDDA_RAW_SENSE " << fmc1701_values[9] << " V, IDDD " << fmc1701_values[12] << " mA, IDDA " << fmc1701_values[13] << " mA" << std::endl;
+      outputfile2 << "L0buffer total hit numbers - even bank " << totalhit_link0 << " odd bank " << totalhit_link1 << " expected hit = 65536 = 256*256 when filled, 0 even not filled. L0buffer fill status" << l0bufferfill << std::endl;
       outputfile2 << "Total number of register read errors " << nfail << std::endl;
 
       abc_star_reg_reset();
@@ -420,7 +420,7 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
     std::cout << "File closed here " << std::endl;
 
     //std::string command = ".! mv " + runname + ".root " + jobid;
-    //std::cout << " Outputing file " << runname << "_" << l << ".root" << std::std::endl;
+    //std::cout << " Outputing file " << runname << "_" << l << ".root" << std::endl;
 
     /*std::string jobid_txt = (runname + "_" + std::to_string(l) + ".txt");
     std::string command_txt = ".! mv " + runname + ".txt " + jobid_txt;
