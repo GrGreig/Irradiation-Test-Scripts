@@ -408,7 +408,7 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
       //t1 = time(&timer) - t1;
 
       outputfile2 << std::endl;
-      outputfile2 << setw(20) << "Event Meta Data - Run " << setw(5) << run << setw(15) << " fileNumber " << l << setw(15) << " eventNumber " << event << setw(25) << setw(25) << " single measurement time " << t1 << std::endl;
+      outputfile2 << setw(20) << "Event Meta Data - Run " << setw(5) << run << setw(15) << " fileNumber " << l << setw(15) << " eventNumber " << event << setw(25) << setw(25) << std::endl;
       outputfile2 << "FMC I/V readings - VDDA_RAW_SENSE " << fmc1701_values[8] << " V, VDDA_RAW_SENSE " << fmc1701_values[9] << " V, IDDD " << fmc1701_values[12] << " mA, IDDA " << fmc1701_values[13] << " mA" << std::endl;
       outputfile2 << "L0buffer total hit numbers - even bank " << totalhit_link0 << " odd bank " << totalhit_link1 << " expected hit = 65536 = 256*256 when filled, 0 even not filled. L0buffer fill status" << l0bufferfill << std::endl;
       outputfile2 << "Total number of register read errors " << nfail << std::endl;
