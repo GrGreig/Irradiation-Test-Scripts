@@ -273,7 +273,7 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
       //std::chrono::duration<double> elapsedTime = currentTime - start; 
 
       outputfile << "Event Number: " << event << std::endl;
-      outputfile << "Elapsed Time: " << elapsedTime.count() << std::endl;
+      //outputfile << "Elapsed Time: " << elapsedTime.count() << std::endl;
 
       //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
       // REGISTER WRITE
