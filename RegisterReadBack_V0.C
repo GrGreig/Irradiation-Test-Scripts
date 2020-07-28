@@ -143,7 +143,10 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
   // SETUP
   //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
   // Trying to dump the raw data for comparison... unsure if this will work without testing.
-  e->burst.dump_raw_data = true;
+  //e->burst.dump_raw_data = true;
+
+  // Number for checking if the file exists and maintinaing the file number.
+  int fileNum = 0;
 
   //Defining register map.
   std::string hw_chip_name = "ABC";
@@ -205,7 +208,23 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
   for (int l = 0; l < nloops; l++)
   {
     abc_star_seu_reset();
-    std::ofstream outputfile((runname + ".txt").c_str());
+    // Check to see if the file to be written to exists and increment if it is already in existance.
+    bool fileExists = true;
+    while ()
+    {
+      std::ifstream fileToCheck ((runname + "_" + fileNum + ".txt").c_str());
+      if(file_to_check.is_open())
+      {
+       fileNum++
+      }
+      else{
+        std::ofstream outputfile((runname + "_" + fileNum + ".txt").c_str());
+        fileExists = false;
+      }
+    file_to_check.close();
+    }
+}
+    std::ofstream outputfile((runname + "_" + fileNum + ".txt").c_str());
 
     const uint32_t sizeofmap = hw_regs.size();
 
@@ -427,7 +446,7 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
 
     gROOT->ProcessLine(command.c_str());
     gROOT->ProcessLine(command_txt.c_str());*/
-    std::cout << " Outputing file " << runname << "_" << l << ".txt" << std::endl;
+    std::cout << " Outputing file " << runname << "_" << FileNum << ".txt" << std::endl;
     
   }
 }
