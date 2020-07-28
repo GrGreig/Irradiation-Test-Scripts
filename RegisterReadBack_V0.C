@@ -212,18 +212,19 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
     bool fileExists = true;
     while (fileExists == true)
     {
-      std::ifstream fileToCheck ((runname + "_" + fileNum + ".txt").c_str());
+      std::ifstream fileToCheck((runname + "_" + fileNum + ".txt").c_str());
       if(fileToCheck.is_open())
       {
        fileNum++;
       }
-      else{
+      else
+      {
         std::ofstream outputfile((runname + "_" + fileNum + ".txt").c_str());
         fileExists = false;
       }
     fileToCheck.close();
     }
-}
+
     const uint32_t sizeofmap = hw_regs.size();
 
     int totalhit_link0, totalhit_link1, event, run, loop, nfail;
