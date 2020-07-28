@@ -210,22 +210,20 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
     abc_star_seu_reset();
     // Check to see if the file to be written to exists and increment if it is already in existance.
     bool fileExists = true;
-    while ()
+    while (fileExists == true)
     {
       std::ifstream fileToCheck ((runname + "_" + fileNum + ".txt").c_str());
-      if(file_to_check.is_open())
+      if(fileToCheck.is_open())
       {
-       fileNum++
+       fileNum++;
       }
       else{
         std::ofstream outputfile((runname + "_" + fileNum + ".txt").c_str());
         fileExists = false;
       }
-    file_to_check.close();
+    fileToCheck.close();
     }
 }
-    std::ofstream outputfile((runname + "_" + fileNum + ".txt").c_str());
-
     const uint32_t sizeofmap = hw_regs.size();
 
     int totalhit_link0, totalhit_link1, event, run, loop, nfail;
@@ -427,7 +425,7 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
       //t1 = time(&timer) - t1;
 
       outputfile2 << std::endl;
-      outputfile2 << setw(20) << "Event Meta Data - Run " << setw(5) << run << setw(15) << " fileNumber " << l << setw(15) << " eventNumber " << event << setw(25) << setw(25) << std::endl;
+      outputfile2 << setw(20) << "Event Meta Data - Run " << setw(5) << run << setw(15) << " fileNumber " << fileNum << setw(15) << " eventNumber " << event << setw(25) << setw(25) << std::endl;
       outputfile2 << "FMC I/V readings - VDDA_RAW_SENSE " << fmc1701_values[8] << " V, VDDA_RAW_SENSE " << fmc1701_values[9] << " V, IDDD " << fmc1701_values[12] << " mA, IDDA " << fmc1701_values[13] << " mA" << std::endl;
       outputfile2 << "L0buffer total hit numbers - even bank " << totalhit_link0 << " odd bank " << totalhit_link1 << " expected hit = 65536 = 256*256 when filled, 0 even not filled. L0buffer fill status" << l0bufferfill << std::endl;
       outputfile2 << "Total number of register read errors " << nfail << std::endl;
@@ -446,7 +444,7 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
 
     gROOT->ProcessLine(command.c_str());
     gROOT->ProcessLine(command_txt.c_str());*/
-    std::cout << " Outputing file " << runname << "_" << FileNum << ".txt" << std::endl;
+    std::cout << " Outputing file " << runname << "_" << fileNum << ".txt" << std::endl;
     
   }
 }
