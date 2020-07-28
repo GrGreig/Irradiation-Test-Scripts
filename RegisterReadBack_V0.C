@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <string>
-#include <chrono>
+//#include <chrono>
 #include <ctime>
 #include <map>
 #include <sstream>
@@ -188,8 +188,8 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
   time_t timer;
   int starttime = time(&timer);
   struct tm *timeinfo;
-  std::chrono::time_point<std::chrono::system_clock> start, currentTime; 
-  start = std::chrono::system_clock::now(); 
+  //std::chrono::time_point<std::chrono::system_clock> start, currentTime; 
+  //start = std::chrono::system_clock::now(); 
   
 // Should this still be used... Need to investigate.
   abc_star_hpr_stop(); // to make the hit pattern read out from the L0buffer consistent
@@ -269,8 +269,8 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
       //timeinfo = localtime(&timer);
       //timestamp = timeinfo->tm_sec + timeinfo->tm_min * 100 + timeinfo->tm_hour * 10000;
       //t1 = time(&timer);
-      currentTime = std::chrono::system_clock::now();
-      std::chrono::duration<double> elapsedTime = currentTime - start; 
+      //currentTime = std::chrono::system_clock::now();
+      //std::chrono::duration<double> elapsedTime = currentTime - start; 
 
       outputfile << "Event Number: " << event << std::endl;
       outputfile << "Elapsed Time: " << elapsedTime.count() << std::endl;
@@ -324,8 +324,8 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
       //timeinfo = localtime(&timer);
       //timestamp2 = timeinfo->tm_sec + timeinfo->tm_min * 100 + timeinfo->tm_hour * 10000;
       //seconds0 = time(&timer) - starttime; /* get current time; same as: timer = time(NULL)  */ 
-      elapsedTime = std::chrono::system_clock::now() - start - elapsedTime;
-      outputfile << "Write Time: " << elapsedTime.count() << std::endl;
+      //elapsedTime = std::chrono::system_clock::now() - start - elapsedTime;
+      //outputfile << "Write Time: " << elapsedTime.count() << std::endl;
 
       if (debug)
       {
@@ -379,8 +379,8 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
         outputfile << "Recieved Register Address: " << regAddress <<  std::endl;
         outputfile << "Recieved Data Packet (LONG): " << regValue <<  std::endl;
         outputfile << "Binary Data: " <<  data << std::endl;
-        elapsedTime = std::chrono::system_clock::now() - start - elapsedTime;
-        outputfile << "Read Time: " << elapsedTime.count() << std::endl;
+        //elapsedTime = std::chrono::system_clock::now() - start - elapsedTime;
+        //outputfile << "Read Time: " << elapsedTime.count() << std::endl;
         outputfile << "" << std::endl;
         reg_index++;
       }
