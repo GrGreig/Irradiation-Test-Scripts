@@ -2,12 +2,13 @@
 #include <unistd.h>
 #include <time.h>
 #include <string>
-//#include <chrono>
+#include <chrono>
 #include <ctime>
 #include <map>
 #include <sstream>
 #include <vector>
 #include <fstream>
+#include <sys/stat.h>
 
 
 // Edits and comments by Graham Greig
@@ -188,11 +189,8 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
   }
 
   //Setup the timer
-  time_t timer;
-  int starttime = time(&timer);
-  struct tm *timeinfo;
-  //std::chrono::time_point<std::chrono::system_clock> start, currentTime; 
-  //start = std::chrono::system_clock::now(); 
+  auto currTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  std::cout << "Time is" << ctime(&currTime) << std::endl;
   
 // Should this still be used... Need to investigate.
   abc_star_hpr_stop(); // to make the hit pattern read out from the L0buffer consistent
@@ -203,7 +201,7 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
   // - Runs are 10 test iterations long.
   // - "nloops" determines the length of the overall test time.
   //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-  std::ofstream outputfile2(("runlog_" + runname + ".txt").c_str());
+  std::ofstream outputfile2(("irradData/runlog_" + runname + ".txt").c_str());
   
   for (int l = 0; l < nloops; l++)
   {
@@ -212,24 +210,20 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
     // Check to see if the file to be written to exists and increment if it is already in existance.
     bool fileExists = true;
     std::string str_num = to_string(fileNum);
-    std::ofstream outputfile((runname + "_" + str_num + ".txt").c_str());
+    struct stat buf;
+    
     while (fileExists == true)
     {	
-      std::ifstream fileToCheck((runname + "_" + str_num + ".txt").c_str());
-      if (fileToCheck.is_open())
+      if (stat(("irradData/" + runname + "_" + str_num + ".txt").c_str(), &buf) != -1)
       {
       	fileNum++;
       	str_num = to_string(fileNum);
       }
       else
-      {
-      	std::ofstream outputfile((runname + "_" + str_num + ".txt").c_str());
-      	std::cout << "made it"<< std::endl;
         fileExists = false;
-      }
-    fileToCheck.close();
     }
-
+    
+    std::ofstream outputfile(("irradData/" + runname + "_" + str_num + ".txt").c_str());
     const uint32_t sizeofmap = hw_regs.size();
 
     int totalhit_link0, totalhit_link1, event, run, loop, nfail;
@@ -256,7 +250,8 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
             "VDDD",
             "VDDA",
         };
-    double fmc1701_values[16] = {0}; //These values are only being saved to root... need to mod!!!
+    // Structure to hold the various FMC outputs.
+    double fmc1701_values[16] = {0}; 
     
     // Cross section determiniation.
     l0bufferfill = true;
@@ -268,6 +263,7 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
 
     // Write of header for output file. 
     outputfile << "RUN NUMBER: " << run << std::endl;
+    outputfile << "START TIME: " << ctime(&currTime) << std::endl;
     outputfile << "LOOP NUMBER: " << loop << std::endl;
     outputfile << "SETTINGS" << std::endl;
     outputfile << "L0 Buffer Fill: " << l0bufferfill << std::endl;
@@ -289,14 +285,13 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
       if (debug)
         std::cout << "File " << l << " register reading iteration " << k << std::endl;
       event = l * nreadings + k;
-      //timeinfo = localtime(&timer);
-      //timestamp = timeinfo->tm_sec + timeinfo->tm_min * 100 + timeinfo->tm_hour * 10000;
-      //t1 = time(&timer);
-      //currentTime = std::chrono::system_clock::now();
-      //std::chrono::duration<double> elapsedTime = currentTime - start; 
+      currTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());	
 
       outputfile << "Event Number: " << event << std::endl;
-      //outputfile << "Elapsed Time: " << elapsedTime.count() << std::endl;
+      
+      //Timestamp every loop.
+      currTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+      outputfile << "Timestamp: " << ctime(&currTime) << std::endl;
 
       //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
       // REGISTER WRITE
@@ -343,20 +338,10 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
       totalhit_link1 = e->m[0]->scan_sum[1];
       abc_star_scanL0Buffer(127, 1, 9);
 
-      
-      //timeinfo = localtime(&timer);
-      //timestamp2 = timeinfo->tm_sec + timeinfo->tm_min * 100 + timeinfo->tm_hour * 10000;
-      //seconds0 = time(&timer) - starttime; /* get current time; same as: timer = time(NULL)  */ 
-      //elapsedTime = std::chrono::system_clock::now() - start - elapsedTime;
-      //outputfile << "Write Time: " << elapsedTime.count() << std::endl;
-
-      if (debug)
-      {
-        std::cout << ctime(&timer) << std::endl;
-      }
-
       nfail = 0;
       outputfile << "REGISTER DATA" << std::endl;
+      outputfile << "HIT LINK 0: " << totalhit_link0 << std::endl;
+      outputfile << "HIT LINK 1: " << totalhit_link1 << std::endl;
 
       //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
       // REGISTER READ
@@ -426,6 +411,8 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
         fmc1701_values[a] = muxdata[a];
         outputfile << names[a] << ": " << muxdata[a] << std::endl;
       }
+      
+      outputfile << "" << std::endl;
 
       //seconds = time(&timer) - starttime; /* get current time; same as: timer = time(NULL)  */
       //t1 = time(&timer) - t1;
@@ -433,7 +420,7 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
       outputfile2 << std::endl;
       outputfile2 << setw(20) << "Event Meta Data - Run " << setw(5) << run << setw(15) << " fileNumber " << fileNum << setw(15) << " eventNumber " << event << setw(25) << setw(25) << std::endl;
       outputfile2 << "FMC I/V readings - VDDA_RAW_SENSE " << fmc1701_values[8] << " V, VDDA_RAW_SENSE " << fmc1701_values[9] << " V, IDDD " << fmc1701_values[12] << " mA, IDDA " << fmc1701_values[13] << " mA" << std::endl;
-      outputfile2 << "L0buffer total hit numbers - even bank " << totalhit_link0 << " odd bank " << totalhit_link1 << " expected hit = 65536 = 256*256 when filled, 0 even not filled. L0buffer fill status" << l0bufferfill << std::endl;
+      outputfile2 << "L0buffer total hit numbers - even bank " << 0 << " odd bank " << totalhit_link1 << " expected hit = 65536 = 256*256 when filled, 0 even not filled. L0buffer fill status" << l0bufferfill << std::endl;
       outputfile2 << "Total number of register read errors " << nfail << std::endl;
 
       abc_star_reg_reset();
