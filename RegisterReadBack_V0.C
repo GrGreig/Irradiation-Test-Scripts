@@ -203,23 +203,28 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
   // - Runs are 10 test iterations long.
   // - "nloops" determines the length of the overall test time.
   //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-  
   std::ofstream outputfile2(("runlog_" + runname + ".txt").c_str());
+  
   for (int l = 0; l < nloops; l++)
   {
     abc_star_seu_reset();
+    
     // Check to see if the file to be written to exists and increment if it is already in existance.
     bool fileExists = true;
+    std::string str_num = to_string(fileNum);
+    std::ofstream outputfile((runname + "_" + str_num + ".txt").c_str());
     while (fileExists == true)
-    {
-      std::ifstream fileToCheck((runname + "_" + fileNum + ".txt").c_str());
-      if(fileToCheck.is_open())
+    {	
+      std::ifstream fileToCheck((runname + "_" + str_num + ".txt").c_str());
+      if (fileToCheck.is_open())
       {
-       fileNum++;
+      	fileNum++;
+      	str_num = to_string(fileNum);
       }
       else
       {
-        std::ofstream outputfile((runname + "_" + fileNum + ".txt").c_str());
+      	std::ofstream outputfile((runname + "_" + str_num + ".txt").c_str());
+      	std::cout << "made it"<< std::endl;
         fileExists = false;
       }
     fileToCheck.close();
