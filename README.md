@@ -143,5 +143,18 @@ Now, Run the following commnad and enter your initials when prompted.
 ./RUNITSDAQ.sh
 ```
 
+After this you will need to configure the chip. To do this, enter the command: 
+
+```
+e->ConfigureVariable(10100,15);
+```
+
+Following this, quit ITSDAQ (.q) and reopen. You should see the current go up to 0.07 A on the 1.5V channel. Now, run the register readback code with:
+
+```
+.X RegisterReadBack_V0.C(<string Run_Name>, <int Num_Loops>)
+```
+
+Note, at this time one loop takes about 2 minutes to execute. 
 
 
