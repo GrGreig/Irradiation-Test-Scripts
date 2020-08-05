@@ -205,7 +205,6 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
   
   for (int l = 0; l < nloops; l++)
   {
-    abc_star_seu_reset();
     
     // Check to see if the file to be written to exists and increment if it is already in existance.
     bool fileExists = true;
@@ -222,10 +221,9 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
       else
         fileExists = false;
     }
-    
     std::ofstream outputfile(("irradData/" + runname + "_" + str_num + ".txt").c_str());
-    const uint32_t sizeofmap = hw_regs.size();
 
+    const uint32_t sizeofmap = hw_regs.size();
     int totalhit_link0, totalhit_link1, event, run, loop, nfail;
     int size = (int)hw_regs.size();
     bool l0bufferfill;
@@ -272,6 +270,13 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
     outputfile << "CalMask: " << !l0bufferfill << std::endl;
     outputfile << "" << std::endl;
 
+    // Reset the chip.
+    abc_star_seu_reset();
+
+    // Read in the fuse ID and start a timer for its integration time.
+    st_read_fuse_ids();
+    auto fuseStartTime = std::chrono::high_resolution_clock::now();
+
     //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // INTERNAL TEST LOOP
     // - Commands are sent to configure individual registers.
@@ -282,10 +287,12 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
     for (int k = 0; k < nreadings; k++)
     {
       e->HsioFlush();
+      // Start the Integration timer (miliseconds)
+      auto startTime = std::chrono::high_resolution_clock::now();
+
       if (debug)
         std::cout << "File " << l << " register reading iteration " << k << std::endl;
-      event = l * nreadings + k;
-      currTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());	
+      event = l * nreadings + k;	
 
       outputfile << "Event Number: " << event << std::endl;
       
@@ -382,9 +389,23 @@ void RegisterReadBack_V0(const std::string &runname, int nloops, double interval
           nfail++;
         }*/
         
+        //Compute integration time. The fuse is only loaded once per major loop to conserve the 
+        // number of reads. Its integration will grow over time because of that.
+        std::chrono::duration<double, std::milli> regIntegration;
+        auto outTime = std::chrono::high_resolution_clock::now();
+        if ( regId == 50 )
+        {
+        regIntegration = outTime - FuseStartTime;
+        }
+        else
+        {
+        regIntegration = outTime - startTime;
+        }
+
         //Output register values to data file. 
         outputfile << "Register Address: " << regId << " Register Name: " << regName << std::endl;
         outputfile << "Recieved Register Address: " << regAddress <<  std::endl;
+        outputfile << "Integration Time (ms): " << regIntegration.count() << std::endl
         outputfile << "Recieved Data Packet (LONG): " << regValue <<  std::endl;
         outputfile << "Binary Data: " <<  data << std::endl;
         //elapsedTime = std::chrono::system_clock::now() - start - elapsedTime;
